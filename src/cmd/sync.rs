@@ -1,4 +1,6 @@
-use git2::{Repository, Oid};
+use std::process::Command;
+
+use git2::{Oid, Repository};
 
 use crate::cmd::get_prev;
 use crate::StaxBranch;
@@ -11,6 +13,12 @@ pub fn sync(repo: &Repository, mut cb: StaxBranch, all_branches: Vec<String>) {
 
     match option_prev {
         Some(prev) => {
+            Command::new("git")
+                .arg("fetch")
+                .arg("origin")
+                .arg(format!("{}:{}", prev, prev))
+                .output()
+                .expect("Failed to execute git push");
 
             let current_head = cb.branch.get().peel_to_commit().unwrap().id();
 
@@ -20,15 +28,15 @@ pub fn sync(repo: &Repository, mut cb: StaxBranch, all_branches: Vec<String>) {
             match branch_contains_commit(repo, prev.as_str(), current_head) {
                 Ok(does_have_head) => {
                     if !does_have_head {
-                        println!("Parent branch {} doesnt have head, the stack remains; ignoring", cb.name);
+                        println!("Parent branch {} doesnt have current HEAD ({}), the stack remains; ignoring", prev, current_head);
                     } else {
                         repo.set_head(format!("refs/heads/{}", prev).as_str())
                             .unwrap();
 
                         let ans = Confirm::new(
                             format!(
-                                "Parent branch {} contains HEAD, delete current branch?",
-                                cb.name
+                                "Parent branch {} contains HEAD ({}), delete current branch?",
+                                prev, current_head
                             )
                             .as_str(),
                         )
@@ -39,7 +47,7 @@ pub fn sync(repo: &Repository, mut cb: StaxBranch, all_branches: Vec<String>) {
                         .prompt();
 
                         match ans {
-                            Ok(true) => println!("Deleted, switched to {}", prev),
+                            Ok(true) => println!("Deleted {}, switched to {}", cb.name, prev),
                             Ok(false) => (),
                             Err(_) => println!("Error with questionnaire, try again later"),
                         }
@@ -54,10 +62,18 @@ pub fn sync(repo: &Repository, mut cb: StaxBranch, all_branches: Vec<String>) {
     };
 }
 
-fn branch_contains_commit(repo: &Repository, branch_name: &str, target_oid: Oid) -> Result<bool, Error> {
+fn branch_contains_commit(
+    repo: &Repository,
+    branch_name: &str,
+    target_oid: Oid,
+) -> Result<bool, Error> {
     let branch = repo.find_branch(branch_name, git2::BranchType::Local)?;
 
     let branch_oid = branch.get().peel_to_commit()?.id();
+
+    if branch_oid == target_oid {
+        return Ok(true);
+    }
 
     let contains_commit = repo.graph_descendant_of(branch_oid, target_oid)?;
 
