@@ -1,10 +1,25 @@
+> I would recommend [git-machete](https://github.com/VirtusLab/git-machete) for stacking operations, it accomplishes most of the goals of this repo. It also has an excellent [IDE Plugin](https://github.com/VirtusLab/git-machete-intellij-plugin#git-machete-intellij-plugin).
+
 # git-stax
 
 Commands for helping with stacked branches.
 
-## Branch Naming Convention
+## Problem
 
-There doesn't appear to be many straightforward ways of stacking branches.
+Branching multiple times solves the problem of [staying unblocked](https://graphite.dev/blog/stacked-changes). However, tracking and maintaining stacked branches is a huge pain.
+
+> The [new](https://adamj.eu/tech/2022/10/15/how-to-rebase-stacked-git-branches/) `--update-refs` is helpful, but doesn't fix all problems.
+
+## Goals
+
+- Automate the naming of branches.
+- Traverse between parent/child branches easily.
+- Do not taint local branch state with changes that are potentially unmerged in remotes. Local state should match remote state as best as possible.
+- Easily sync up and/or rebase after code is merged in remotes.
+
+See [comparison](/comparison.md).
+
+## Branch Naming Convention
 
 We can skip most of the headaches that come with DAG traversal by using a branch naming convention:
 
@@ -69,3 +84,5 @@ Same as `new`, then
 - Creates a GitLab MR
 	- Targets parent branch
 	- Sets the MR Title to the last commit, stripping out the type/scope from conventional commits
+
+- [1] Yes, we could switch to email patches, but let's be realistic.
